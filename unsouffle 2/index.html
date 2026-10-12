@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Souffle">
+<meta name="theme-color" content="#0c0c0e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Un souffle</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Cinzel:wght@300;400&display=swap');
+
+:root {
+  --bg: #0c0c0e;
+  --surface: #13131a;
+  --text: #d8d4cc;
+  --text-dim: #6b6760;
+  --dim: #4a4845;
+  --mid: #7a7672;
+  --exp: #c8956a;
+  --con: #7a8fb3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  position: fixed;
+  width: 100%;
+}
+
+/* ── Screens ─────────────────────────────────────────────────────── */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+#screen-entry.hidden  { transform: translateX(-18px); }
+#screen-data.hidden   { transform: translateX(18px); }
+
+/* ══════════════════════════════════════════════════════════════════
+   ÉCRAN SAISIE
+   ══════════════════════════════════════════════════════════════════ */
+#screen-entry {
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.ambient::before {
+  content: '';
+  position: absolute;
+  width: 70vw; height: 70vw;
+  max-width: 420px; max-height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(120,100,80,0.06) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.expanding .ambient::before {
+  background: radial-gradient(circle, rgba(200,149,106,0.11) 0%, transparent 70%);
+  transform: translate(-50%, -50%) scale(1.35);
+}
+body.contracting .ambient::before {
+  background: radial-gradient(circle, rgba(122,143,179,0.09) 0%, transparent 70%);
+  transform: translate(-50%, -50%) scale(0.72);
+}
+
+.entry-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 380px;
+  padding: 0 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.topbar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 44px;
+  opacity: 0.45;
+}
+.topbar-time {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  font-weight: 300;
+}
+.topbar-menu {
+  display: flex;
+  gap: 5px;
+  cursor: pointer;
+  padding: 4px;
+}
+.topbar-menu span {
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  display: block;
+}
+
+.appname-entry {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.35em;
+  font-weight: 300;
+  color: var(--text-dim);
+  margin-bottom: 56px;
+  text-transform: uppercase;
+}
+
+.breath-orb {
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  position: relative;
+  margin-bottom: 60px;
+  transition: all 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.breath-orb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(200,180,150,0.13);
+  transition: all 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.breath-orb::after {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(200,180,150,0.07);
+  transition: all 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.orb-inner {
+  position: absolute;
+  inset: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(180,160,130,0.12) 0%, transparent 100%);
+  transition: all 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: breathe 5s ease-in-out infinite;
+}
+body.expanding .breath-orb { transform: scale(1.22); }
+body.expanding .breath-orb::before { border-color: rgba(200,149,106,0.32); box-shadow: 0 0 36px rgba(200,149,106,0.07); }
+body.expanding .breath-orb::after  { border-color: rgba(200,149,106,0.13); inset: 10px; }
+body.expanding .orb-inner { background: radial-gradient(circle, rgba(200,149,106,0.22) 0%, transparent 100%); inset: 22px; }
+
+body.contracting .breath-orb { transform: scale(0.76); }
+body.contracting .breath-orb::before { border-color: rgba(122,143,179,0.32); box-shadow: 0 0 28px rgba(122,143,179,0.07); }
+body.contracting .breath-orb::after  { border-color: rgba(122,143,179,0.13); inset: 18px; }
+body.contracting .orb-inner { background: radial-gradient(circle, rgba(122,143,179,0.22) 0%, transparent 100%); inset: 36px; }
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.choices {
+  display: flex;
+  align-items: center;
+  gap: 44px;
+  margin-bottom: 44px;
+}
+.choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 13px;
+  cursor: pointer;
+  padding: 8px;
+  border: none;
+  background: none;
+  user-select: none;
+  color: inherit;
+}
+.choice-icon {
+  width: 62px; height: 62px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.expansion .choice-icon  { border: 1.5px solid rgba(200,149,106,0.25); }
+.contraction .choice-icon { border: 1.5px solid rgba(122,143,179,0.25); }
+.expansion:hover .choice-icon, .expansion.active .choice-icon {
+  border-color: rgba(200,149,106,0.65);
+  background: rgba(200,149,106,0.07);
+  box-shadow: 0 0 22px rgba(200,149,106,0.12);
+  transform: scale(1.08);
+}
+.contraction:hover .choice-icon, .contraction.active .choice-icon {
+  border-color: rgba(122,143,179,0.65);
+  background: rgba(122,143,179,0.07);
+  box-shadow: 0 0 22px rgba(122,143,179,0.12);
+  transform: scale(1.08);
+}
+.icon-svg { width: 26px; height: 26px; transition: all 0.5s; }
+.expansion .icon-svg  { color: var(--exp); }
+.contraction .icon-svg { color: var(--con); }
+.choice-label {
+  font-family: 'Cinzel', serif;
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  transition: color 0.4s;
+}
+.expansion:hover .choice-label, .expansion.active .choice-label   { color: var(--exp); }
+.contraction:hover .choice-label, .contraction.active .choice-label { color: var(--con); }
+
+.divider { width: 1px; height: 38px; background: linear-gradient(to bottom, transparent, rgba(200,180,150,0.12), transparent); }
+
+.refinement {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 36px;
+  margin-bottom: 44px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: all 0.5s ease;
+  pointer-events: none;
+}
+.refinement.visible { opacity: 1; transform: translateY(0); pointer-events: all; }
+
+.tone-group { display: flex; gap: 10px; align-items: center; }
+.tone-btn {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.35s;
+}
+.tone-warm { background: rgba(200,149,106,0.45); }
+.tone-cool { background: rgba(122,143,179,0.45); }
+.tone-btn.selected { transform: scale(1.5); border-color: rgba(255,255,255,0.25); }
+.tone-warm.selected { background: var(--exp); }
+.tone-cool.selected { background: var(--con); }
+
+.refine-divider { width: 1px; height: 20px; background: rgba(200,180,150,0.1); }
+
+.intensity-group { display: flex; gap: 9px; align-items: center; }
+.int-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  border: 1px solid rgba(200,180,150,0.2);
+  cursor: pointer;
+  transition: all 0.3s;
+  background: transparent;
+}
+.int-dot.filled { background: rgba(200,180,150,0.45); border-color: rgba(200,180,150,0.45); }
+.int-dot.peak   { background: rgba(200,180,150,0.9); transform: scale(1.3); }
+
+.note-area {
+  width: 100%;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.5s ease;
+  pointer-events: none;
+  margin-bottom: 28px;
+}
+.note-area.visible { opacity: 1; transform: translateY(0); pointer-events: all; }
+.note-input {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(200,180,150,0.1);
+  color: var(--text);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 15.5px;
+  font-style: italic;
+  font-weight: 300;
+  padding: 8px 0;
+  outline: none;
+  caret-color: var(--text-dim);
+  transition: border-color 0.3s;
+  letter-spacing: 0.02em;
+}
+.note-input:focus { border-bottom-color: rgba(200,180,150,0.28); }
+.note-input::placeholder { color: var(--text-dim); }
+.word-count {
+  font-size: 9.5px;
+  color: var(--text-dim);
+  text-align: right;
+  margin-top: 5px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.1em;
+  transition: color 0.3s;
+}
+.word-count.limit { color: rgba(200,149,106,0.7); }
+
+.bottom-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  opacity: 0;
+  transition: opacity 0.5s ease 0.15s;
+}
+.bottom-actions.visible { opacity: 1; }
+
+.btn-note {
+  font-family: 'Cinzel', serif;
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 0.3s;
+}
+.btn-note:hover { color: var(--text); }
+.btn-note.active { color: var(--exp); }
+
+.btn-save {
+  font-family: 'Cinzel', serif;
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid rgba(200,180,150,0.13);
+  cursor: pointer;
+  padding: 10px 22px;
+  border-radius: 1px;
+  transition: all 0.4s;
+}
+.btn-save.ready { color: var(--text); border-color: rgba(200,180,150,0.35); }
+.btn-save:hover { background: rgba(200,180,150,0.04); }
+
+.saved-flash {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 0.35em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+  z-index: 100;
+}
+.saved-flash.show { opacity: 1; }
+
+.moon-entry {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  opacity: 0.28;
+  font-size: 18px;
+  z-index: 10;
+  cursor: pointer;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ÉCRAN DONNÉES
+   ══════════════════════════════════════════════════════════════════ */
+#screen-data { overflow: hidden; }
+
+.data-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 30px 32px 14px; flex-shrink: 0;
+}
+.appname-data {
+  font-family: 'Cinzel', serif; font-size: 11px;
+  letter-spacing: 0.32em; font-weight: 300;
+  color: var(--dim); text-transform: uppercase;
+}
+.btn-back {
+  font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 0.18em;
+  color: var(--dim); text-transform: uppercase; background: none; border: none;
+  cursor: pointer; padding: 4px 0; transition: color 0.3s;
+}
+.btn-back:hover { color: var(--mid); }
+
+.periods {
+  display: flex; justify-content: center; padding: 0 32px 22px; flex-shrink: 0;
+}
+.pb {
+  font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--dim); background: none; border: none;
+  border-bottom: 1px solid transparent; cursor: pointer; padding: 6px 15px;
+  transition: all 0.3s;
+}
+.pb.on { color: var(--mid); border-bottom-color: rgba(200,180,150,0.2); }
+
+#chart { flex: 1; display: block; width: 100%; touch-action: none; overflow: hidden; }
+
+#label {
+  position: fixed;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.2s;
+  user-select: none; -webkit-user-select: none;
+  z-index: 50;
+}
+#label.on { opacity: 1; }
+#ldate { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.16em; white-space: nowrap; }
+#lnote { font-family: 'Cormorant Garamond', serif; font-size: 12px; font-style: italic;
+  color: var(--mid); white-space: nowrap; }
+
+.data-bottom {
+  display: flex; justify-content: center; align-items: center;
+  gap: 18px; padding: 12px 32px 24px; flex-shrink: 0;
+}
+.li { display: flex; align-items: center; gap: 7px; font-family: 'Cinzel', serif;
+  font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.ld { width: 6px; height: 6px; border-radius: 50%; }
+.ld.e { background: var(--exp); opacity: 0.5; }
+.ld.c { background: var(--con); opacity: 0.5; }
+.lsep { width: 1px; height: 13px; background: rgba(200,180,150,0.07); }
+#moon-data { font-size: 12px; opacity: 0.32; }
+
+/* Safe area for iPhone notch / home bar */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .data-bottom, .bottom-actions {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+  .moon-entry {
+    bottom: calc(28px + env(safe-area-inset-bottom));
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ ÉCRAN SAISIE ══════════════════════════════════════════════ -->
+<div id="screen-entry" class="screen">
+  <div class="ambient"></div>
+  <div class="entry-inner">
+
+    <div class="topbar">
+      <span class="topbar-time" id="currentTime">—</span>
+      <div class="topbar-menu">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="appname-entry">Souffle</div>
+
+    <div class="breath-orb">
+      <div class="orb-inner"></div>
+    </div>
+
+    <div class="choices">
+      <button class="choice-btn expansion" onclick="selectState('expansion')">
+        <div class="choice-icon">
+          <svg class="icon-svg" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+            <circle cx="14" cy="14" r="2.5"/>
+            <line x1="14" y1="2.5" x2="14" y2="6.5"/>
+            <line x1="14" y1="21.5" x2="14" y2="25.5"/>
+            <line x1="2.5" y1="14" x2="6.5" y2="14"/>
+            <line x1="21.5" y1="14" x2="25.5" y2="14"/>
+            <line x1="5.8" y1="5.8" x2="8.7" y2="8.7"/>
+            <line x1="19.3" y1="19.3" x2="22.2" y2="22.2"/>
+            <line x1="22.2" y1="5.8" x2="19.3" y2="8.7"/>
+            <line x1="8.7" y1="19.3" x2="5.8" y2="22.2"/>
+          </svg>
+        </div>
+        <span class="choice-label">Expansion</span>
+      </button>
+
+      <div class="divider"></div>
+
+      <button class="choice-btn contraction" onclick="selectState('contraction')">
+        <div class="choice-icon">
+          <svg class="icon-svg" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+            <circle cx="14" cy="14" r="2.5"/>
+            <circle cx="14" cy="14" r="7" stroke-dasharray="1.5 3" opacity="0.5"/>
+            <line x1="14" y1="6" x2="14" y2="9.5"/>
+            <line x1="14" y1="18.5" x2="14" y2="22"/>
+            <line x1="6" y1="14" x2="9.5" y2="14"/>
+            <line x1="18.5" y1="14" x2="22" y2="14"/>
+            <line x1="8.5" y1="8.5" x2="10.8" y2="10.8"/>
+            <line x1="17.2" y1="17.2" x2="19.5" y2="19.5"/>
+            <line x1="19.5" y1="8.5" x2="17.2" y2="10.8"/>
+            <line x1="10.8" y1="17.2" x2="8.5" y2="19.5"/>
+          </svg>
+        </div>
+        <span class="choice-label">Contraction</span>
+      </button>
+    </div>
+
+    <div class="refinement" id="refinement">
+      <div class="tone-group">
+        <div class="tone-btn tone-warm" onclick="setTone('warm')"></div>
+        <div class="tone-btn tone-cool" onclick="setTone('cool')"></div>
+      </div>
+      <div class="refine-divider"></div>
+      <div class="intensity-group">
+        <div class="int-dot" onclick="setIntensity(1)"></div>
+        <div class="int-dot" onclick="setIntensity(2)"></div>
+        <div class="int-dot" onclick="setIntensity(3)"></div>
+      </div>
+    </div>
+
+    <div class="note-area" id="noteArea">
+      <input type="text" class="note-input" id="noteInput" placeholder="une note…" oninput="countWords()">
+      <div class="word-count" id="wordCount">0 / 12</div>
+    </div>
+
+    <div class="bottom-actions" id="bottomActions">
+      <button class="btn-note" id="btnNote" onclick="toggleNote()">+ note</button>
+      <button class="btn-save" id="saveBtn" onclick="doSave()">enregistrer</button>
+    </div>
+
+  </div><!-- /entry-inner -->
+</div><!-- /screen-entry -->
+
+<!-- ══ ÉCRAN DONNÉES ══════════════════════════════════════════════ -->
+<div id="screen-data" class="screen hidden">
+
+  <div class="data-header">
+    <span class="appname-data">Un souffle</span>
+    <button class="btn-back" onclick="showEntry()">← saisie</button>
+  </div>
+
+  <div class="periods">
+    <button class="pb" onclick="load('jour')">Jour</button>
+    <button class="pb on" onclick="load('semaine')">Semaine</button>
+    <button class="pb" onclick="load('mois')">Mois</button>
+    <button class="pb" onclick="load('an')">Année</button>
+  </div>
+
+  <svg id="chart" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="gE" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="rgba(200,149,106,0.22)"/>
+        <stop offset="100%" stop-color="rgba(200,149,106,0)"/>
+      </linearGradient>
+      <linearGradient id="gC" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="rgba(122,143,179,0)"/>
+        <stop offset="100%" stop-color="rgba(122,143,179,0.22)"/>
+      </linearGradient>
+      <clipPath id="cpE"><rect id="crE"/></clipPath>
+      <clipPath id="cpC"><rect id="crC"/></clipPath>
+    </defs>
+    <line id="axis" stroke="rgba(200,180,150,0.06)" stroke-dasharray="3 10" stroke-width="1"/>
+    <g id="moons"></g>
+    <path id="fE" clip-path="url(#cpE)"/>
+    <path id="fC" clip-path="url(#cpC)"/>
+    <path id="crv" fill="none" stroke="rgba(200,180,150,0.30)" stroke-width="1.4" stroke-linecap="round"/>
+    <g id="dots"></g>
+    <line id="ind" stroke="rgba(200,180,150,0.14)" stroke-width="1" stroke-dasharray="2 6" opacity="0"/>
+    <rect id="band" fill="rgba(0,0,0,0.002)"/>
+  </svg>
+
+  <div id="label">
+    <svg id="lshape" width="44" height="44" viewBox="0 0 44 44"></svg>
+    <div id="ldate"></div>
+    <div id="lnote"></div>
+  </div>
+
+  <div class="data-bottom">
+    <div class="li"><div class="ld e"></div>expansion</div>
+    <div class="lsep"></div>
+    <div class="li"><div class="ld c"></div>contraction</div>
+    <div class="lsep"></div>
+    <span id="moon-data"></span>
+  </div>
+
+</div><!-- /screen-data -->
+
+<!-- Moon button on entry screen (navigates to data) -->
+<div class="moon-entry" id="moonEntry" onclick="showData()"></div>
+<div class="saved-flash" id="savedFlash">enregistré</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   PWA + Service Worker
+   ═══════════════════════════════════════════════════════════════ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Navigation entre écrans
+   ═══════════════════════════════════════════════════════════════ */
+function showData() {
+  document.getElementById('screen-entry').classList.add('hidden');
+  document.getElementById('screen-data').classList.remove('hidden');
+  // Re-render chart when becoming visible
+  setTimeout(() => { load(period); }, 60);
+}
+
+function showEntry() {
+  document.getElementById('screen-data').classList.add('hidden');
+  document.getElementById('screen-entry').classList.remove('hidden');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ÉCRAN SAISIE — logique
+   ═══════════════════════════════════════════════════════════════ */
+let currentState = null;
+let noteVisible  = false;
+
+function updateTime() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('currentTime').textContent = h + ' · ' + m;
+}
+updateTime();
+setInterval(updateTime, 30000);
+
+function getMoonEmoji() {
+  const phases = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+  const ref = new Date('2000-01-06');
+  const now = new Date();
+  const days = (now - ref) / 86400000;
+  return phases[Math.floor((days % 29.53) / 29.53 * 8) % 8];
+}
+document.getElementById('moonEntry').textContent = getMoonEmoji();
+
+function selectState(type) {
+  currentState = type;
+  document.body.classList.remove('expanding','contracting');
+  document.body.classList.add(type === 'expansion' ? 'expanding' : 'contracting');
+  document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.' + type).classList.add('active');
+  document.getElementById('refinement').classList.add('visible');
+  document.getElementById('bottomActions').classList.add('visible');
+  document.getElementById('saveBtn').classList.add('ready');
+}
+
+function setTone(tone) {
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector('.tone-' + tone).classList.add('selected');
+}
+
+function setIntensity(level) {
+  const dots = document.querySelectorAll('.int-dot');
+  dots.forEach((d, i) => {
+    d.classList.remove('filled','peak');
+    if (i < level) {
+      d.classList.add('filled');
+      if (i === level - 1) d.classList.add('peak');
+    }
+  });
+}
+
+function toggleNote() {
+  noteVisible = !noteVisible;
+  const area = document.getElementById('noteArea');
+  const btn  = document.getElementById('btnNote');
+  if (noteVisible) {
+    area.classList.add('visible');
+    btn.classList.add('active');
+    btn.textContent = '− note';
+    setTimeout(() => document.getElementById('noteInput').focus(), 350);
+  } else {
+    area.classList.remove('visible');
+    btn.classList.remove('active');
+    btn.textContent = '+ note';
+  }
+}
+
+function countWords() {
+  const input = document.getElementById('noteInput');
+  const raw   = input.value.trim();
+  const words = raw === '' ? [] : raw.split(/\s+/).filter(w => w.length > 0);
+  const count = words.length;
+  const display = document.getElementById('wordCount');
+  if (count > 12) {
+    input.value = words.slice(0, 12).join(' ');
+    display.classList.add('limit');
+  }
+  display.textContent = Math.min(count, 12) + ' / 12';
+  display.classList.toggle('limit', count >= 11);
+}
+
+function doSave() {
+  if (!currentState) return;
+  // Persist to localStorage
+  try {
+    const entry = {
+      t: new Date().toISOString(),
+      v: currentState === 'expansion' ? 1 : -1,
+      tone: document.querySelector('.tone-btn.selected')?.classList.contains('tone-warm') ? 'warm' : 'cool',
+      intensity: document.querySelectorAll('.int-dot.filled').length || 0,
+      note: document.getElementById('noteInput').value.trim() || null
+    };
+    const stored = JSON.parse(localStorage.getItem('souffle') || '[]');
+    stored.push(entry);
+    localStorage.setItem('souffle', JSON.stringify(stored));
+  } catch(e) {}
+
+  const flash = document.getElementById('savedFlash');
+  flash.classList.add('show');
+  setTimeout(() => {
+    flash.classList.remove('show');
+    resetEntry();
+  }, 1800);
+}
+
+function resetEntry() {
+  document.body.classList.remove('expanding','contracting');
+  document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('refinement').classList.remove('visible');
+  document.getElementById('noteArea').classList.remove('visible');
+  document.getElementById('bottomActions').classList.remove('visible');
+  document.getElementById('saveBtn').classList.remove('ready');
+  document.getElementById('noteInput').value = '';
+  document.getElementById('wordCount').textContent = '0 / 12';
+  document.querySelectorAll('.int-dot').forEach(d => d.classList.remove('filled','peak'));
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('selected'));
+  const btn = document.getElementById('btnNote');
+  btn.textContent = '+ note';
+  btn.classList.remove('active');
+  currentState = null;
+  noteVisible = false;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ÉCRAN DONNÉES — logique
+   ═══════════════════════════════════════════════════════════════ */
+const NS = 'http://www.w3.org/2000/svg';
+const svg   = document.getElementById('chart');
+const axis  = document.getElementById('axis');
+const moong = document.getElementById('moons');
+const fE    = document.getElementById('fE');
+const fC    = document.getElementById('fC');
+const crv   = document.getElementById('crv');
+const dots  = document.getElementById('dots');
+const ind   = document.getElementById('ind');
+const band  = document.getElementById('band');
+const label = document.getElementById('label');
+const lshape= document.getElementById('lshape');
+const ldate = document.getElementById('ldate');
+const lnote = document.getElementById('lnote');
+
+let period = 'semaine';
+let data   = [];
+let coords = [];
+let padX, drawW, midY, segW;
+let hideTimer = null;
+
+const NOTES = ['clarté soudaine','après la pluie','fatigue douce','pensée tenace',
+               'calme profond','légèreté','pesanteur','éveil tardif','lumière basse','tension douce'];
+
+function gen(p) {
+  const cfg = { jour:[8,7200000], semaine:[24,25200000], mois:[52,50400000], an:[130,241200000] };
+  const [n, dt] = cfg[p];
+  const now = Date.now();
+  let v = 0;
+  return Array.from({length:n}, (_,i) => {
+    v = Math.max(-1, Math.min(1, v + (Math.random()-0.47)*0.55));
+    return { t: new Date(now-(n-1-i)*dt), v,
+             note: Math.random()<0.16 ? NOTES[Math.floor(Math.random()*NOTES.length)] : null };
+  });
+}
+
+const MN = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+const DY = ['dim','lun','mar','mer','jeu','ven','sam'];
+function fmt(d, p) {
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  if (p==='jour')    return `${hh} h ${mm}`;
+  if (p==='semaine') return `${DY[d.getDay()]}  ${hh} h`;
+  if (p==='mois')    return `${d.getDate()} ${MN[d.getMonth()]}`;
+  return `${MN[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function moonPhase(d) { return ((d - new Date('2000-01-06')) / 86400000 % 29.53) / 29.53; }
+const MOJI = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+function moonEmoji(p) { return MOJI[Math.floor(p*8)%8]; }
+
+function svgEl(tag, attrs) {
+  const e = document.createElementNS(NS, tag);
+  Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k,v));
+  return e;
+}
+
+function smoothD(pts) {
+  let d = `M${pts[0].x} ${pts[0].y}`;
+  for (let i=1; i<pts.length; i++) {
+    const p=pts[i-1], c=pts[i], mx=(p.x+c.x)/2;
+    d += ` C${mx} ${p.y} ${mx} ${c.y} ${c.x} ${c.y}`;
+  }
+  return d;
+}
+
+function drawShape(isExp, color) {
+  lshape.innerHTML = '';
+  const cx=22, cy=22, rx=13, ry=9;
+  lshape.appendChild(svgEl('ellipse', {cx,cy,rx,ry, fill:'none', stroke:color, 'stroke-width':'1', opacity:'0.65'}));
+  if (isExp) {
+    [0,45,90,135,180,225,270,315].forEach(deg => {
+      const r = deg * Math.PI / 180;
+      lshape.appendChild(svgEl('line', {
+        x1: cx + rx*Math.cos(r), y1: cy + ry*Math.sin(r),
+        x2: cx + (rx+5)*Math.cos(r), y2: cy + (ry+5)*Math.sin(r),
+        stroke: color, 'stroke-width':'1', 'stroke-linecap':'round', opacity:'0.55'
+      }));
+    });
+  } else {
+    lshape.appendChild(svgEl('circle', {cx, cy, r:'2.5', fill:color, opacity:'0.7'}));
+  }
+}
+
+function showAt(idx) {
+  clearTimeout(hideTimer);
+  const c = coords[idx];
+  if (!c) return;
+  const isExp  = c.v >= 0;
+  const color  = isExp ? 'rgba(200,149,106,0.85)' : 'rgba(122,143,179,0.85)';
+  drawShape(isExp, color);
+  ldate.textContent = fmt(c.t, period);
+  ldate.style.color = color;
+  lnote.textContent = c.note || '';
+  lnote.style.display = c.note ? 'block' : 'none';
+  label.classList.add('on');
+
+  requestAnimationFrame(() => {
+    const lw   = label.offsetWidth,  lh = label.offsetHeight;
+    const svgR = svg.getBoundingClientRect();
+    const absX = svgR.left + c.x;
+    const topY  = svgR.top + midY * 0.12;
+    let left = absX - lw/2;
+    left = Math.max(8, Math.min(window.innerWidth - lw - 8, left));
+    label.style.left = left + 'px';
+    label.style.top  = topY + 'px';
+    const labelBottomInSVG = (topY - svgR.top) + lh + 6;
+    const bandTopInSVG = parseFloat(band.getAttribute('y'));
+    ind.setAttribute('x1', c.x); ind.setAttribute('x2', c.x);
+    ind.setAttribute('y1', labelBottomInSVG); ind.setAttribute('y2', bandTopInSVG);
+    ind.setAttribute('opacity','1');
+  });
+}
+
+function hide() {
+  hideTimer = setTimeout(() => {
+    label.classList.remove('on');
+    ind.setAttribute('opacity','0');
+  }, 2400);
+}
+
+function render() {
+  const W = svg.clientWidth, H = svg.clientHeight;
+  if (!W || !H) return;
+  padX = 24;
+  const padT = 20, padB = 20;
+  midY  = H / 2;
+  const ampY = (H-padT-padB)/2*0.73;
+  drawW = W - padX*2;
+  const n = data.length;
+  segW  = drawW / n;
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  axis.setAttribute('x1',padX); axis.setAttribute('y1',midY);
+  axis.setAttribute('x2',padX+drawW); axis.setAttribute('y2',midY);
+
+  document.getElementById('crE').setAttribute('x',padX);
+  document.getElementById('crE').setAttribute('y',0);
+  document.getElementById('crE').setAttribute('width',drawW);
+  document.getElementById('crE').setAttribute('height',midY);
+
+  document.getElementById('crC').setAttribute('x',padX);
+  document.getElementById('crC').setAttribute('y',midY);
+  document.getElementById('crC').setAttribute('width',drawW);
+  document.getElementById('crC').setAttribute('height',H-midY);
+
+  coords = data.map((d,i) => ({
+    x: padX + (i/(n-1))*drawW,
+    y: midY - d.v*ampY,
+    v: d.v, t: d.t, note: d.note
+  }));
+
+  moong.innerHTML = '';
+  if (period==='mois' || period==='an') {
+    coords.forEach(c => {
+      const ph = moonPhase(c.t);
+      const full = ph>0.45 && ph<0.55, newm = ph<0.05 || ph>0.95;
+      if (full||newm) moong.appendChild(svgEl('line',{
+        x1:c.x, y1:padT, x2:c.x, y2:H-padB,
+        stroke: full ? 'rgba(220,200,150,0.11)' : 'rgba(100,120,170,0.09)',
+        'stroke-width':'1'
+      }));
+    });
+  }
+
+  const pathD = smoothD(coords);
+  crv.setAttribute('d', pathD);
+  const fillD = pathD + ` L${coords[n-1].x} ${midY} L${coords[0].x} ${midY} Z`;
+  fE.setAttribute('d',fillD); fE.setAttribute('fill','url(#gE)');
+  fC.setAttribute('d',fillD); fC.setAttribute('fill','url(#gC)');
+
+  dots.innerHTML = '';
+  coords.forEach(c => {
+    if (!c.note) return;
+    dots.appendChild(svgEl('circle',{
+      cx:c.x, cy:c.y, r:'3',
+      fill: c.v>=0 ? 'rgba(200,149,106,0.65)' : 'rgba(122,143,179,0.65)'
+    }));
+  });
+
+  const bandH = 80;
+  const bandTop = H - bandH;
+  band.setAttribute('x', padX);
+  band.setAttribute('y', bandTop);
+  band.setAttribute('width', drawW);
+  band.setAttribute('height', bandH);
+
+  document.getElementById('moon-data').textContent = moonEmoji(moonPhase(data[n-1].t));
+}
+
+function idxFromClientX(clientX) {
+  const r = svg.getBoundingClientRect();
+  const x = clientX - r.left - padX;
+  return Math.max(0, Math.min(data.length-1, Math.floor(x / segW)));
+}
+
+band.addEventListener('touchstart', e => {
+  e.preventDefault();
+  showAt(idxFromClientX(e.touches[0].clientX));
+}, { passive: false });
+
+band.addEventListener('touchmove', e => {
+  e.preventDefault();
+  clearTimeout(hideTimer);
+  showAt(idxFromClientX(e.touches[0].clientX));
+}, { passive: false });
+
+band.addEventListener('touchend', e => {
+  e.preventDefault();
+  hide();
+}, { passive: false });
+
+band.addEventListener('mousemove', e => {
+  clearTimeout(hideTimer);
+  showAt(idxFromClientX(e.clientX));
+});
+band.addEventListener('mouseleave', hide);
+
+function load(p) {
+  period = p;
+  document.querySelectorAll('.pb').forEach(b => {
+    const t = b.textContent.toLowerCase();
+    b.classList.toggle('on',
+      (p==='jour'&&t==='jour') || (p==='semaine'&&t==='semaine') ||
+      (p==='mois'&&t==='mois') || (p==='an'&&t==='année'));
+  });
+  label.classList.remove('on');
+  ind.setAttribute('opacity','0');
+  data = gen(p);
+  render();
+}
+
+window.addEventListener('resize', () => {
+  label.classList.remove('on');
+  render();
+});
+</script>
+</body>
+</html>
